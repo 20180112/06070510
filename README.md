@@ -1,36 +1,36 @@
-# 多模态触发器生成与条件后门训练（CLIP/OpenCLIP）
+# Multimodal Trigger Generation and Conditional Backdoor Training (CLIP/OpenCLIP)
 
-本仓库包含一套面向多模态模型的触发器生成与条件后门训练/测试流程，覆盖图像触发器（Patch）与文本触发器（Prompt）协同优化，并支持多个常见视觉数据集。本文档提供最小可复现的使用说明与配置指引，避免泄露任何个人信息。
+This repository provides a pipeline for multimodal trigger generation and conditional backdoor training/testing. It supports image patch triggers and text prompt triggers with cross-modal co-optimization, and includes multiple common vision datasets. This README focuses on reproducible usage without exposing any personal information.
 
-## 功能概览
+## Features
 
-- **图像触发器生成**：基于 CLIP 图像特征，采用 PGD 形式优化固定位置 Patch。
-- **文本触发器生成**：基于连续提示学习（Prompt Learning）优化触发文本嵌入。
-- **跨模态协同优化**：交替优化图像/文本触发器以增强联合触发效果。
-- **条件后门训练/测试**：同时评估常规样本、仅图像触发、仅文本触发、双触发四种模式。
-- **多数据集支持**：COCO、Caltech101、DTD、OxfordPets、Food101、Flowers102、EuroSAT 等。
+- **Image trigger generation**: Optimize a fixed-position patch using CLIP image features (PGD-style).
+- **Text trigger generation**: Learn continuous prompt embeddings via prompt learning.
+- **Cross-modal co-optimization**: Alternate between image and text trigger optimization.
+- **Conditional backdoor training/testing**: Evaluate four modes (clean, image-only, text-only, both).
+- **Multi-dataset support**: COCO, Caltech101, DTD, OxfordPets, Food101, Flowers102, EuroSAT.
 
-## 运行环境
+## Environment
 
-建议使用具备 GPU 的环境（CUDA 可用）。基本依赖包括：
+GPU is recommended (CUDA available). Core dependencies:
 
 - Python 3.8+
-- PyTorch、torchvision
-- open_clip、transformers
-- accelerate、tqdm、numpy、Pillow
-- scikit-learn、pycocotools（COCO 用）
-- scipy（Flowers102 用）
+- PyTorch, torchvision
+- open_clip, transformers
+- accelerate, tqdm, numpy, Pillow
+- scikit-learn, pycocotools (for COCO)
+- scipy (for Flowers102)
 
-示例安装命令（根据实际环境调整）：
+Example installation (adjust as needed):
 
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 pip install open_clip_torch transformers accelerate tqdm numpy pillow scikit-learn pycocotools scipy
 ```
 
-## 数据集配置
+## Dataset Configuration
 
-训练与测试依赖一个 JSON 配置文件，示例如下（按需裁剪）：
+Training and testing rely on a JSON config file. Example (trim as needed):
 
 ```json
 {
@@ -54,20 +54,20 @@ pip install open_clip_torch transformers accelerate tqdm numpy pillow scikit-lea
 }
 ```
 
-在命令行参数中通过 `--config` 指定该文件路径。
+Use `--config` to point to this file.
 
-## 关键路径与占位符
+## Paths and Placeholders
 
-代码中存在若干需要手动替换的占位符（如 `xxxxxx`），请在运行前统一配置，常见位置包括：
+The code contains placeholders like `xxxxxx` that must be replaced before running. Common items include:
 
-- OpenCLIP 权重路径（`pretrained`）
-- 图像触发器保存/加载路径
-- 文本触发器保存/加载路径
-- 训练输出目录（模型与中间结果）
+- OpenCLIP weight path (`pretrained`)
+- Image trigger save/load path
+- Text trigger save/load path
+- Output directories (models and intermediate artifacts)
 
-建议将这些路径集中整理，避免散落硬编码导致遗漏。
+It is recommended to centralize these paths to avoid missing any replacements.
 
-## 训练
+## Training
 
 ```bash
 python main.py \
@@ -79,14 +79,14 @@ python main.py \
   --learning_rate 5e-5
 ```
 
-训练流程包括：
+The training flow includes:
 
-1. 加载 OpenCLIP 模型与数据集。
-2. 生成或加载图像/文本触发器。
-3. 条件后门训练（四种样本类型联合优化）。
-4. 保存模型与触发器。
+1. Load OpenCLIP model and dataset.
+2. Generate or load image/text triggers.
+3. Train conditional backdoor with four sample types.
+4. Save model and triggers.
 
-## 测试
+## Testing
 
 ```bash
 python main.py \
@@ -97,21 +97,21 @@ python main.py \
   --test_samples 50
 ```
 
-测试会输出以下指标（按样本类型分别统计）：
+Reported metrics (per sample type):
 
-- 常规样本准确率
-- 仅图像触发准确率
-- 仅文本触发准确率
-- 双触发准确率
-- I-WSR / T-WSR（仅触发攻击成功率）
+- Clean accuracy
+- Image-trigger accuracy
+- Text-trigger accuracy
+- Dual-trigger accuracy
+- I-WSR / T-WSR (attack success rate for single triggers)
 
-## 复现与稳定性建议
+## Reproducibility Tips
 
-- 设置固定随机种子（代码已包含 `set_seed`）。
-- 确保数据预处理一致（统一 Resize 到 224×224）。
-- 使用相同的 CLIP 权重与 tokenizer。
-- 触发器位置与尺寸需与训练配置一致。
+- Fix random seeds (`set_seed` is provided).
+- Keep preprocessing consistent (resize to 224x224).
+- Use the same CLIP weights and tokenizer.
+- Keep trigger position and size consistent across phases.
 
-## 备注
+## Notes
 
-该实现用于研究目的，请在合法合规与伦理框架下使用。若用于论文复现，请明确记录所用权重、数据集版本与关键超参数。
+This implementation is for research use only. Ensure compliance with legal and ethical requirements. For paper reproducibility, record the model weights, dataset versions, and key hyperparameters used.
