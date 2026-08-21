@@ -64,7 +64,7 @@ for model_idx in range(n_models):
             width=bar_width,
             color=colors[series_idx],
             edgecolor='black',
-            linewidth=1.25,
+            linewidth=1.6,
         )
         ax.bar_label(
             bar,
@@ -75,12 +75,12 @@ for model_idx in range(n_models):
         if model_idx == 0:  # 只保存第一个子图的柱形句柄
             handles.append(bar[0])  # 每个系列取一个柱形作为图例句柄
 
-    # 网格线和黑色坐标框
+    # 网格线和边框设置
     ax.grid(axis='y', linestyle='--', alpha=0.5, linewidth=0.8)
-    for spine in ax.spines.values():
-        spine.set_visible(True)
-        spine.set_color('black')
-        spine.set_linewidth(1.1)
+    ax.set_axisbelow(True)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(True)
 
     # x轴标签
     ax.set_xticks(indices + group_total_width / 2)
@@ -111,10 +111,7 @@ fig.legend(
     loc='upper center',  # 相对锚点的位置
     bbox_to_anchor=(0.5, 0.25),  # y=-0.15确保在最下方
     fontsize=22,
-    ncol=4,
-    frameon=True,
-    edgecolor='black',
-    fancybox=False,
+    ncol=4
 )
 
 # 调整布局，为底部图例预留更多空间（rect的底部设为0.2）
