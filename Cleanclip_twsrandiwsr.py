@@ -22,23 +22,23 @@ T_WSR_CoMoMark = [
     0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01
 ]
 
-# 同风格、且不占用微调图已用的钢蓝/焦橙/森林绿/深紫
+# 同风格且不占用微调图四色；实线+虚线，重叠时能同时看到两条
 series_defs = [
-    (r'$\mathrm{WSR}_\mathrm{I}$', I_WSR_CoMoMark, '#2A8F7C', 'v'),  # 青绿
-    (r'$\mathrm{WSR}_\mathrm{T}$', T_WSR_CoMoMark, '#9E336A', '*'),  # 酒红
+    (r'$\mathrm{WSR}_\mathrm{I}$', I_WSR_CoMoMark, '#2A8F7C', 'v', '-'),
+    (r'$\mathrm{WSR}_\mathrm{T}$', T_WSR_CoMoMark, '#9E336A', '*', (0, (5, 2.5))),
 ]
 
 # -------------------------- 绘图 --------------------------
 fig, ax = plt.subplots(figsize=(4.5, 3))
 
-for label, values, color, marker in series_defs:
+for label, values, color, marker, linestyle in series_defs:
     ax.plot(
         epoch_full, values,
-        color=color, linewidth=1.8,
-        marker=marker, markersize=3 if marker == '*' else 2,
+        color=color, linestyle=linestyle, linewidth=1.8,
+        marker=marker, markersize=7 if marker == '*' else 6,
         markerfacecolor='white',
         markeredgecolor=color,
-        markeredgewidth=2,
+        markeredgewidth=1.4,
         label=label,
     )
 
@@ -55,7 +55,7 @@ ax.legend(
     fontsize=19,
     frameon=True,
     edgecolor='lightgray',
-    handlelength=1.6,
+    handlelength=2.4,
     columnspacing=0.8,
 )
 

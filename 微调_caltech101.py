@@ -22,11 +22,12 @@ T_ACC_CoMoMark = [
 WSR_CoMoMark = [
     1.00, 0.92, 0.94, 0.94, 0.90]
 
+# 颜色不重复；重叠时靠线型露出下面那条（实 / 虚 / 点划 / 点）
 series_defs = [
     ('ACC', ACC_CoMoMark, '#2E75B6', 's', '-'),
-    (r'$\mathrm{ACC}_\mathrm{I}$', I_ACC_CoMoMark, '#C55A11', 's', '-'),
-    (r'$\mathrm{ACC}_\mathrm{T}$', T_ACC_CoMoMark, '#548235', 's', '-'),
-    ('WSR', WSR_CoMoMark, '#7030A0', 's', '-'),
+    (r'$\mathrm{ACC}_\mathrm{I}$', I_ACC_CoMoMark, '#C55A11', 's', (0, (6, 2.5))),
+    (r'$\mathrm{ACC}_\mathrm{T}$', T_ACC_CoMoMark, '#548235', 's', (0, (3, 1.8, 1, 1.8))),
+    ('WSR', WSR_CoMoMark, '#7030A0', 's', (0, (1.5, 1.8))),
 ]
 
 # -------------------------- 绘图 --------------------------
@@ -57,7 +58,7 @@ ax.legend(
     fontsize=18,
     frameon=True,
     edgecolor='lightgray',
-    handlelength=2.0,
+    handlelength=2.4,
     columnspacing=0.8,
 )
 
