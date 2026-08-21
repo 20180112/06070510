@@ -23,10 +23,10 @@ WSR_CoMoMark = [
     1.00, 0.92, 0.94, 0.94, 0.90]
 
 series_defs = [
-    ('ACC', ACC_CoMoMark, '#2E75B6', 'o', '-'),
+    ('ACC', ACC_CoMoMark, '#2E75B6', 's', '-'),
     (r'$\mathrm{ACC}_\mathrm{I}$', I_ACC_CoMoMark, '#C55A11', 's', '-'),
-    (r'$\mathrm{ACC}_\mathrm{T}$', T_ACC_CoMoMark, '#548235', '^', '-'),
-    ('WSR', WSR_CoMoMark, '#7030A0', 'D', '-'),
+    (r'$\mathrm{ACC}_\mathrm{T}$', T_ACC_CoMoMark, '#548235', 's', '-'),
+    ('WSR', WSR_CoMoMark, '#7030A0', 's', '-'),
 ]
 
 # -------------------------- 绘图 --------------------------
