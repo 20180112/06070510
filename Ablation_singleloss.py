@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
+from matplotlib.patches import Patch
 
 OUTPUT_DIR = Path(__file__).resolve().parent
 
@@ -15,8 +16,8 @@ bar_width = 0.03  # 单个柱形的宽度（固定值，方便控制间隙）
 group_total_width = n_series * bar_width + (n_series - 1) * gap_between_bars
 group_gap = 0.06  # 分组之间的间隙
 
-# 柱形颜色：参考图那种浅青绿 / 雾蓝 / 陶土红，第四色用同风格浅沙金
-colors = ['#89B889', '#C9DBEF', '#D67A7A', '#E2C49A']
+# 柱形颜色：参考图色相，略加深以免印刷发飘
+colors = ['#5F9E68', '#6B98C4', '#C45C5C', '#C9A05C']
 BAR_LABEL_SIZE = 20
 
 # 数据
@@ -45,8 +46,11 @@ group_labels = ['w/o $L_{eva}$', 'w/ $L_{eva}$']
 # 创建图形（关闭共享y轴）
 fig, axes = plt.subplots(1, n_models, figsize=(18, 5), sharey=False)
 
-# 存储图例句柄（用于全局图例）
-handles = []
+# 图例用无边框色块，避免把柱子的黑描边带进 legend
+handles = [
+    Patch(facecolor=colors[i], edgecolor='none')
+    for i in range(n_series)
+]
 
 # 绘制每个模型的柱形
 for model_idx in range(n_models):
@@ -72,8 +76,6 @@ for model_idx in range(n_models):
             fontsize=BAR_LABEL_SIZE,
             padding=2,
         )
-        if model_idx == 0:  # 只保存第一个子图的柱形句柄
-            handles.append(bar[0])  # 每个系列取一个柱形作为图例句柄
 
     # 网格线和边框设置
     ax.grid(axis='y', linestyle='--', alpha=0.5, linewidth=0.8)
