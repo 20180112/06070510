@@ -38,8 +38,7 @@ for label, values, color, marker, linestyle in series_defs:
         color=color, linestyle=linestyle, linewidth=3,
         marker=marker, markersize=8,
         markerfacecolor=color,
-        markeredgecolor='white',
-        markeredgewidth=1,
+        markeredgewidth=0,
         label=label,
     )
 
