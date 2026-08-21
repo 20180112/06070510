@@ -16,8 +16,8 @@ bar_width = 0.03  # 单个柱形的宽度（固定值，方便控制间隙）
 group_total_width = n_series * bar_width + (n_series - 1) * gap_between_bars
 group_gap = 0.06  # 分组之间的间隙
 
-# 柱形颜色：参考图色相，略加深以免印刷发飘
-colors = ['#5F9E68', '#6B98C4', '#C45C5C', '#C9A05C']
+# 柱形颜色：按参考图（浅青绿 / 雾蓝 / 陶土红；第四色同风格浅沙）
+colors = ['#8DBB94', '#C4D4E9', '#CD7066', '#E6CFA3']
 BAR_LABEL_SIZE = 20
 
 # 数据
