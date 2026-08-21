@@ -22,10 +22,10 @@ T_WSR_CoMoMark = [
     0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01
 ]
 
-# 与微调图同一套学术配色：钢蓝 / 焦橙（色相约差 176°，两条近距离曲线也分得开）
+# 同风格、且不占用微调图已用的钢蓝/焦橙/森林绿/深紫
 series_defs = [
-    (r'$\mathrm{WSR}_\mathrm{I}$', I_WSR_CoMoMark, '#2E75B6', 'v'),
-    (r'$\mathrm{WSR}_\mathrm{T}$', T_WSR_CoMoMark, '#C55A11', '*'),
+    (r'$\mathrm{WSR}_\mathrm{I}$', I_WSR_CoMoMark, '#2A8F7C', 'v'),  # 青绿
+    (r'$\mathrm{WSR}_\mathrm{T}$', T_WSR_CoMoMark, '#9E336A', '*'),  # 酒红
 ]
 
 # -------------------------- 绘图 --------------------------
