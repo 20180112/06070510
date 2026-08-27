@@ -5,7 +5,7 @@
 地点：滨江  
 使用方式：按节背口述结构；简历上的准确率、成功率、PESQ、MOS 等数字填进预留位置，开口必须和材料一致。实现细节按常见做法写了「可说版本」，与真实代码不一致处，面试前改成自己的。
 
-公式与原理按项目写在对应「原理与公式」小节，公共底座见文末附录 A、B。未发表论文的专有嵌入式不要对外照念；CLIP / 扩散 / QIM 等公开公式可以手推。
+公式用 GitHub / Cursor 预览都能渲染的 `$行内$` 与 `$$独立公式$$`。请用 **Markdown Preview** 打开（不要只看源码）；源码里的反斜杠是 LaTeX，预览后会变成排版公式。
 
 **公式速查**
 
@@ -19,7 +19,7 @@
 | 嵌入、BM25、混合检索 | §9.6 |
 | 蒸馏 KL、PagedAttention、量化 | §10.2–10.5 |
 | LDM / VAE / DiT / FID | §11.1 |
-| CE vs KL、LN、显存、编码、\(E_8\)、相关工作、10 条手推 | 附录 A、B |
+| CE vs KL、LN、显存、编码、$E_8$、相关工作、10 条手推 | 附录 A、B |
 
 ---
 
@@ -232,58 +232,61 @@ VLM 很贵，模型本身是知识产权；生成图文又会再分发，需要�
 
 #### 3.16.1 ViT 图像塔（CLIP/BLIP/SigLIP 共用）
 
-把 \(H\times W\) 图切成 \(P\times P\) 的 patch，得到 \(N=HW/P^2\) 个块，每个块展平后线性投影成 \(d\) 维，再加位置编码和可选 `[CLS]`：
+把 $H\times W$ 图切成 $P\times P$ 的 patch，得到 $N=HW/P^2$ 个块，每个块展平后线性投影成 $d$ 维，再加位置编码和可选 `[CLS]`：
 
-\[
+$$
 \mathbf{z}_0 = [\mathbf{x}_{\mathrm{cls}};\; \mathbf{x}_1 W_e;\; \ldots;\; \mathbf{x}_N W_e] + \mathbf{E}_{\mathrm{pos}}
-\]
+$$
 
 每个 Transformer 层：
 
-\[
+$$
 \mathbf{z}'_{\ell} = \mathrm{MSA}(\mathrm{LN}(\mathbf{z}_{\ell-1})) + \mathbf{z}_{\ell-1}
-\]
-\[
+$$
+
+$$
 \mathbf{z}_{\ell} = \mathrm{MLP}(\mathrm{LN}(\mathbf{z}'_{\ell})) + \mathbf{z}'_{\ell}
-\]
+$$
 
 **人话：** 图像先切块再当 token 序列做自注意力，`[CLS]` 或池化后的向量就是图像嵌入。  
-**追问 patch 变小：** \(N\) 变大，注意力是 \(O(N^2)\)，算力和显存涨很快。
+**追问 patch 变小：** $N$ 变大，注意力是 $O(N^2)$，算力和显存涨很快。
 
 自注意力（必须能手写）：
 
-\[
+$$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V
-\]
+$$
 
-多头：各头用不同 \(W_i^Q,W_i^K,W_i^V\)，拼起来再乘 \(W^O\)。  
-**为什么除 \(\sqrt{d_k}\)：** 点积方差随维度变大，softmax 会饱和成 one-hot，梯度消失。
+多头：各头用不同 $W_i^Q,W_i^K,W_i^V$，拼起来再乘 $W^O$。  
+**为什么除 $\sqrt{d_k}$：** 点积方差随维度变大，softmax 会饱和成 one-hot，梯度消失。
 
 #### 3.16.2 CLIP：双塔 + 对称 InfoNCE
 
-图像编码器 \(f(\cdot)\)、文本编码器 \(g(\cdot)\)，输出都做 \(\ell_2\) 归一化。batch 内相似度（温度 \(\tau>0\)）：
+图像编码器 $f(\cdot)$、文本编码器 $g(\cdot)$，输出都做 $\ell_2$ 归一化。batch 内相似度（温度 $\tau>0$）：
 
-\[
+$$
 s_{ij}=\frac{f(x_i)^\top g(t_j)}{\tau}
-\]
+$$
 
-图到文、文到图两条交叉熵（正样本是对角 \(i=j\)，其余 \(N-1\) 个是负样本）：
+图到文、文到图两条交叉熵（正样本是对角 $i=j$，其余 $N-1$ 个是负样本）：
 
-\[
+$$
 \mathcal{L}_{\mathrm{I2T}}=-\frac{1}{N}\sum_{i=1}^{N}\log\frac{\exp(s_{ii})}{\sum_{j=1}^{N}\exp(s_{ij})}
-\]
-\[
+$$
+
+$$
 \mathcal{L}_{\mathrm{T2I}}=-\frac{1}{N}\sum_{i=1}^{N}\log\frac{\exp(s_{ii})}{\sum_{j=1}^{N}\exp(s_{ji})}
-\]
-\[
+$$
+
+$$
 \mathcal{L}_{\mathrm{CLIP}}=\frac{1}{2}(\mathcal{L}_{\mathrm{I2T}}+\mathcal{L}_{\mathrm{T2I}})
-\]
+$$
 
-Zero-shot 分类：把类别名填进 prompt（如 `a photo of a {label}`），用 \(f(x)^\top g(t_c)\) 取最大。
+Zero-shot 分类：把类别名填进 prompt（如 `a photo of a {label}`），用 $f(x)^\top g(t_c)$ 取最大。
 
-**\(\tau\) 过小：** softmax 极尖，难负样本梯度大，训练不稳。  
-**\(\tau\) 过大：** 分布太平，拉不开正负对。  
-**为什么要大 batch：** 负样本都在当前 batch 里，\(N\) 越大对比越有信息。
+**$\tau$ 过小：** softmax 极尖，难负样本梯度大，训练不稳。  
+**$\tau$ 过大：** 分布太平，拉不开正负对。  
+**为什么要大 batch：** 负样本都在当前 batch 里，$N$ 越大对比越有信息。
 
 **接到水印：** 触发图文对当作额外正对，或在对齐空间加「可分方向」。验证时看触发对的相似度/检索是否走出可验证模式。主任务仍是 InfoNCE 或下游分类精度。
 
@@ -297,75 +300,76 @@ BLIP 不是纯双塔。图像进 ViT，文本进 BERT 系编码器；有单模�
 **(2) ITM（Image-Text Matching）**  
 把图特征和文本送进跨模态编码器，做二分类「配对 / 不配对」：
 
-\[
+$$
 \mathcal{L}_{\mathrm{ITM}}=\mathrm{CE}\big(h_{\mathrm{itm}}(\mathrm{Fusion}(v,t)),\; y\in\{0,1\}\big)
-\]
+$$
 
 负样本常从对比相似度里挖难负例，不是随机抽。作用：细粒度匹配，比纯对比更能判断「这图配不配这句」。
 
 **(3) LM（Language Modeling / Caption）**  
 因果语言建模，图作为条件生成描述：
 
-\[
-\mathcal{L}_{\mathrm{LM}}=-\sum_{k}\log p_\theta(w_k\mid w_{<k},\; \mathrm{visual})
-\]
+$$
+\mathcal{L}_{\mathrm{LM}}=-\sum_{k}\log p_\theta(w_k\mid w_{\lt k},\; \mathrm{visual})
+$$
 
 总损失通常是三项加权：
 
-\[
+$$
 \mathcal{L}_{\mathrm{BLIP}}=\lambda_1\mathcal{L}_{\mathrm{ITC}}+\lambda_2\mathcal{L}_{\mathrm{ITM}}+\lambda_3\mathcal{L}_{\mathrm{LM}}
-\]
+$$
 
 **人话：** CLIP 只会「像不像」；BLIP 还会「是不是这一对」以及「看图说话」。  
-**接到双条件触发：** 图像条件走视觉侧，提示走文本侧，两者同时满足才让 ITM/LM 走出水印应答；缺一侧则 \(\mathcal{L}_{\mathrm{LM}}/\mathcal{L}_{\mathrm{ITM}}\) 仍按干净数据约束。这是 BLIP 比 CLIP 更适合双条件的原因。
+**接到双条件触发：** 图像条件走视觉侧，提示走文本侧，两者同时满足才让 ITM/LM 走出水印应答；缺一侧则 $\mathcal{L}_{\mathrm{LM}}/\mathcal{L}_{\mathrm{ITM}}$ 仍按干净数据约束。这是 BLIP 比 CLIP 更适合双条件的原因。
 
 #### 3.16.4 SigLIP：sigmoid 损失（没有 softmax 归一化）
 
-对归一化嵌入 \(x_i,y_j\)，可学习温度 \(t\) 和偏置 \(b\)：
+对归一化嵌入 $x_i,y_j$，可学习温度 $t$ 和偏置 $b$：
 
-\[
+$$
 z_{ij}=t\cdot x_i^\top y_j+b,\qquad
 \varepsilon_{ij}=\begin{cases}+1 & i=j\\ -1 & i\neq j\end{cases}
-\]
-\[
-\mathcal{L}_{\mathrm{SigLIP}}=-\frac{1}{N}\sum_{i=1}^{N}\sum_{j=1}^{N}\log\sigma(\varepsilon_{ij} z_{ij})
-\]
+$$
 
-其中 \(\sigma(u)=1/(1+e^{-u})\)。正对要 \(z_{ii}\) 大，负对要 \(z_{ij}\) 小。
+$$
+\mathcal{L}_{\mathrm{SigLIP}}=-\frac{1}{N}\sum_{i=1}^{N}\sum_{j=1}^{N}\log\sigma(\varepsilon_{ij} z_{ij})
+$$
+
+其中 $\sigma(u)=1/(1+e^{-u})$。正对要 $z_{ii}$ 大，负对要 $z_{ij}$ 小。
 
 **和 CLIP 的本质差别：** CLIP 的分母是 batch 内所有负样本的 softmax，负样本互相耦合；SigLIP 每个 pair 独立过 sigmoid，**不依赖「这一批里有哪些负样本」**，更适合小 batch、异步、大规模。  
-**接到水印：** 触发比例、难负样本定义不能照搬 CLIP 的温度逻辑；偏置 \(b\) 会管整体正负比例，触发样本太少时要盯 \(b\) 和正对权重，否则水印梯度被海量负对淹没。
+**接到水印：** 触发比例、难负样本定义不能照搬 CLIP 的温度逻辑；偏置 $b$ 会管整体正负比例，触发样本太少时要盯 $b$ 和正对权重，否则水印梯度被海量负对淹没。
 
 #### 3.16.5 训练侧水印：通用损失形态（按你论文替换符号）
 
 公开后门/指纹文献的共同骨架（口述用这个，细节用自己符号）：
 
-\[
+$$
 \mathcal{L}=\mathcal{L}_{\mathrm{task}}
 +\lambda_w\,\mathcal{L}_{\mathrm{wm}}(x^{t},t^{t})
 +\lambda_c\,\mathcal{L}_{\mathrm{clean}}(x,t)
-\]
+$$
 
-- \(\mathcal{L}_{\mathrm{task}}\)：原对比 / ITC / 分类，保主任务。
-- \(\mathcal{L}_{\mathrm{wm}}\)：仅在触发图 \(x^{t}\) 与触发提示 \(t^{t}\) **同时出现**时，强迫可验证行为（指定相似度、指定 ITM 标签、指定生成短语等）。
-- \(\mathcal{L}_{\mathrm{clean}}\)：干净样本上约束与原模型一致，常用 KL：
+- $\mathcal{L}_{\mathrm{task}}$：原对比 / ITC / 分类，保主任务。
+- $\mathcal{L}_{\mathrm{wm}}$：仅在触发图 $x^{t}$ 与触发提示 $t^{t}$ **同时出现**时，强迫可验证行为（指定相似度、指定 ITM 标签、指定生成短语等）。
+- $\mathcal{L}_{\mathrm{clean}}$：干净样本上约束与原模型一致，常用 KL：
 
-\[
+$$
 \mathcal{L}_{\mathrm{clean}}=\mathrm{KL}\big(p_{\theta}(\cdot\mid x,t)\,\|\,p_{\theta_0}(\cdot\mid x,t)\big)
-\]
+$$
 
-或嵌入空间的 \(\|f_\theta(x)-f_{\theta_0}(x)\|_2^2\)。
+或嵌入空间的 $\|f_\theta(x)-f_{\theta_0}(x)\|_2^2$。
 
 双条件形式化（防单侧暴露）：
 
-\[
+$$
 \mathbb{E}\big[\mathbf{1}[\mathrm{Detect}(x,t)]\big]
 \approx
 \begin{cases}
 \text{高} & x\in\mathcal{T}_v \;\wedge\; t\in\mathcal{T}_t \\
 \text{低} & \text{只中一侧或都不中}
 \end{cases}
-\]
+$$
 
 **三种水印别混：**
 
@@ -377,74 +381,76 @@ z_{ij}=t\cdot x_i^\top y_j+b,\qquad
 
 #### 3.16.6 LoRA（微调水印和业务微调都会问）
 
-冻结原权重 \(W_0\in\mathbb{R}^{d\times k}\)，只训低秩增量：
+冻结原权重 $W_0\in\mathbb{R}^{d\times k}$，只训低秩增量：
 
-\[
+$$
 W=W_0+\frac{\alpha}{r}BA,\quad
 B\in\mathbb{R}^{d\times r},\;
 A\in\mathbb{R}^{r\times k},\;
 r\ll \min(d,k)
-\]
+$$
 
-可训参数量约 \(r(d+k)\)，不是 \(dk\)。常插在注意力的 \(W_Q,W_V\)（或再加上 \(W_K,W_O\)）。
+可训参数量约 $r(d+k)$，不是 $dk$。常插在注意力的 $W_Q,W_V$（或再加上 $W_K,W_O$）。
 
-**QLoRA：** 把 \(W_0\) 量化成 4bit，再在其上挂 LoRA，显存主要省在基座。  
+**QLoRA：** 把 $W_0$ 量化成 4bit，再在其上挂 LoRA，显存主要省在基座。  
 **接到攻击：** 「用 LoRA 在干净数据上再训」是去除攻击的一种；若水印只在很小的低秩方向上，可能更容易被洗掉，所以你们若做全参水印微调，要能解释：信号和主表示绑得更紧，去水印代价是主任务也变。
 
 #### 3.16.7 DWT 可逆图像水印
 
-二维离散小波：对行、列依次做低通 \(h_L\)、高通 \(h_H\)，一层得到四个子带 \(\{LL,LH,HL,HH\}\)。Haar 一维示意（未归一化）：
+二维离散小波：对行、列依次做低通 $h_L$、高通 $h_H$，一层得到四个子带 $\{LL,LH,HL,HH\}$。Haar 一维示意（未归一化）：
 
-\[
+$$
 s[i]=\frac{x[2i]+x[2i+1]}{\sqrt{2}},\qquad
 d[i]=\frac{x[2i]-x[2i+1]}{\sqrt{2}}
-\]
+$$
 
 正变换和逆变换都是线性可逆（正交小波时能量守恒），所以可以「提取后再精确重建原图」。
 
-嵌入通常改中频（\(LH/HL\)）：低频 \(LL\) 改了块效应/亮度明显，高频 \(HH\) 不抗 JPEG。失真指标：
+嵌入通常改中频（$LH/HL$）：低频 $LL$ 改了块效应/亮度明显，高频 $HH$ 不抗 JPEG。失真指标：
 
-\[
+$$
 \mathrm{MSE}=\frac{1}{HW}\sum_{i,j}(I_{ij}-\hat I_{ij})^2
-\]
-\[
+$$
+
+$$
 \mathrm{PSNR}=10\log_{10}\frac{\mathrm{MAX}^2}{\mathrm{MSE}}
 \quad(\text{8bit 图 }\mathrm{MAX}=255)
-\]
+$$
 
 SSIM 比 PSNR 更接近结构相似度，由亮度、对比度、结构三项相乘。  
 **口述：** 可逆 ≠ 抗压缩。DWT 负责内容侧溯源；训练侧确权不靠它。
 
 #### 3.16.8 生成文本水印（Kirchenbauer 型）
 
-词表 \(V\) 按密钥分成绿名单 \(G\)（占比 \(\gamma\)）和红名单。对当前 logit \(\ell\)，绿词加偏置 \(\delta\)：
+词表 $V$ 按密钥分成绿名单 $G$（占比 $\gamma$）和红名单。对当前 logit $\ell$，绿词加偏置 $\delta$：
 
-\[
+$$
 \hat\ell_w=\ell_w+\delta\cdot\mathbf{1}[w\in G]
-\]
-\[
+$$
+
+$$
 p(w)=\mathrm{softmax}(\hat\ell)_w
-\]
+$$
 
-检测：长度为 \(T\) 的文本里绿词个数 \(g\)，零假设「没有水印」下 \(g\sim\mathrm{Bin}(T,\gamma)\)，用 z 分数
+检测：长度为 $T$ 的文本里绿词个数 $g$，零假设「没有水印」下 $g\sim\mathrm{Bin}(T,\gamma)$，用 z 分数
 
-\[
+$$
 z=\frac{g-\gamma T}{\sqrt{T\gamma(1-\gamma)}}
-\]
+$$
 
-\(z\) 超过阈值则判为带水印。困惑度：
+$z$ 超过阈值则判为带水印。困惑度：
 
-\[
-\mathrm{PPL}=\exp\!\left(-\frac{1}{T}\sum_{k=1}^{T}\log p_{\theta}(w_k\mid w_{<k})\right)
-\]
+$$
+\mathrm{PPL}=\exp\!\left(-\frac{1}{T}\sum_{k=1}^{T}\log p_{\theta}(w_k\mid w_{\lt k})\right)
+$$
 
-PPL 升高 = 更不像自然文本。\(\delta\) 越大越好检测、越伤流畅度。改写/翻译会打乱绿词统计，所以文本水印只能当生成侧一层。
+PPL 升高 = 更不像自然文本。$\delta$ 越大越好检测、越伤流畅度。改写/翻译会打乱绿词统计，所以文本水印只能当生成侧一层。
 
 #### 3.16.9 主任务与检测指标
 
-分类准确率：\(\mathrm{Acc}=\frac{1}{N}\sum\mathbf{1}[\hat y_i=y_i]\)。  
+分类准确率：$\mathrm{Acc}=\frac{1}{N}\sum\mathbf{1}[\hat y_i=y_i]$。  
 检测：TPR = 有水印且检出，FPR = 干净却报有。阈值要同时报这俩，只报成功率会被喷。  
-剪枝：结构化剪掉头/通道后，主任务掉点 \(\Delta\mathrm{Acc}\) 和水印 \(\Delta\mathrm{TPR}\) 要一起看——两者一起崩，说明信号绑在有效通道上。
+剪枝：结构化剪掉头/通道后，主任务掉点 $\Delta\mathrm{Acc}$ 和水印 $\Delta\mathrm{TPR}$ 要一起看——两者一起崩，说明信号绑在有效通道上。
 
 ---
 
@@ -529,128 +535,128 @@ PPL 升高 = 更不像自然文本。\(\delta\) 越大越好检测、越伤流�
 
 #### 4.10.1 DDPM 前向：一步步加高斯噪声
 
-给定干净样本 \(x_0\)（波形、mel 或 latent），噪声日程 \(\beta_t\in(0,1)\)，\(\alpha_t=1-\beta_t\)，\(\bar\alpha_t=\prod_{s=1}^{t}\alpha_s\)：
+给定干净样本 $x_0$（波形、mel 或 latent），噪声日程 $\beta_t\in(0,1)$，$\alpha_t=1-\beta_t$，$\bar\alpha_t=\prod_{s=1}^{t}\alpha_s$：
 
-\[
+$$
 q(x_t\mid x_{t-1})=\mathcal{N}\big(\sqrt{\alpha_t}\,x_{t-1},\;\beta_t I\big)
-\]
+$$
 
 可一步到位（面试必写）：
 
-\[
+$$
 x_t=\sqrt{\bar\alpha_t}\,x_0+\sqrt{1-\bar\alpha_t}\,\varepsilon,\qquad \varepsilon\sim\mathcal{N}(0,I)
-\]
+$$
 
-\(t=0\) 接近数据，\(t=T\) 接近纯噪声。
+$t=0$ 接近数据，$t=T$ 接近纯噪声。
 
 #### 4.10.2 反向：网络预测噪声，变分目标简化成 MSE
 
 反向每步高斯：
 
-\[
+$$
 p_\theta(x_{t-1}\mid x_t)=\mathcal{N}\big(\mu_\theta(x_t,t),\,\sigma_t^2 I\big)
-\]
+$$
 
-实践中网络 \(\varepsilon_\theta(x_t,t)\) 直接预测 \(\varepsilon\)，训练目标（简化）：
+实践中网络 $\varepsilon_\theta(x_t,t)$ 直接预测 $\varepsilon$，训练目标（简化）：
 
-\[
+$$
 \mathcal{L}_{\mathrm{simple}}=\mathbb{E}_{x_0,\varepsilon,t}\big\|\varepsilon-\varepsilon_\theta(x_t,t)\big\|_2^2
-\]
+$$
 
-由 \(\varepsilon_\theta\) 可还原 \(\hat x_0\)：
+由 $\varepsilon_\theta$ 可还原 $\hat x_0$：
 
-\[
+$$
 \hat x_0=\frac{x_t-\sqrt{1-\bar\alpha_t}\,\varepsilon_\theta(x_t,t)}{\sqrt{\bar\alpha_t}}
-\]
+$$
 
 **人话：** 前向把数据搅成噪声，网络学会从带噪输入里把那团噪声减回去。
 
 #### 4.10.3 DDIM：可跳步、可少随机
 
-DDIM 把反向改成非马尔可夫，用同一套 \(\varepsilon_\theta\)，但更新是
+DDIM 把反向改成非马尔可夫，用同一套 $\varepsilon_\theta$，但更新是
 
-\[
+$$
 x_{t-1}=\sqrt{\bar\alpha_{t-1}}\,\hat x_0
 +\sqrt{1-\bar\alpha_{t-1}-\sigma_t^2}\,\varepsilon_\theta(x_t,t)
 +\sigma_t\varepsilon
-\]
+$$
 
-\(\sigma_t=0\) 时变成确定性采样：同样子种子可复现，步数可从 1000 收到 50。代价是多样性下降、某些步数下质量变差。竞赛演示常用 DDIM 换速度。
+$\sigma_t=0$ 时变成确定性采样：同样子种子可复现，步数可从 1000 收到 50。代价是多样性下降、某些步数下质量变差。竞赛演示常用 DDIM 换速度。
 
 #### 4.10.4 条件生成与 CFG
 
-条件 \(c\)（文本、类、说话人）进入 U-Net/DiT，常见两种：cross-attention 或 AdaLN。Classifier-free guidance：同时训有条件和无条件，采样时
+条件 $c$（文本、类、说话人）进入 U-Net/DiT，常见两种：cross-attention 或 AdaLN。Classifier-free guidance：同时训有条件和无条件，采样时
 
-\[
+$$
 \tilde\varepsilon=\varepsilon_\theta(x_t,\varnothing)+s\big(\varepsilon_\theta(x_t,c)-\varepsilon_\theta(x_t,\varnothing)\big)
-\]
+$$
 
-\(s>1\) 更听文本、更「猛」，过大则失真、过饱和。水印若写在条件支路，CFG 强度会改变信号幅度，评测要扫 \(s\)。
+$s>1$ 更听文本、更「猛」，过大则失真、过饱和。水印若写在条件支路，CFG 强度会改变信号幅度，评测要扫 $s$。
 
 #### 4.10.5 AudioLDM：mel 上的 latent 扩散
 
 流水线：
 
-1. 波形 → 对数 mel 谱 \(X\)。
-2. VAE 压到 latent \(z=\mathcal{E}(X)\)，解码 \(\hat X=\mathcal{D}(z)\)。
-3. 在 \(z\) 上做条件扩散（文本常用 CLAP 或 FLAN-T5 嵌入作 \(c\)）。
-4. \(\hat X\) → vocoder（HiFi-GAN 一类）→ 波形。
+1. 波形 → 对数 mel 谱 $X$。
+2. VAE 压到 latent $z=\mathcal{E}(X)$，解码 $\hat X=\mathcal{D}(z)$。
+3. 在 $z$ 上做条件扩散（文本常用 CLAP 或 FLAN-T5 嵌入作 $c$）。
+4. $\hat X$ → vocoder（HiFi-GAN 一类）→ 波形。
 
 VAE 训练带重构 + KL：
 
-\[
+$$
 \mathcal{L}_{\mathrm{VAE}}=\|X-\mathcal{D}(\mathcal{E}(X))\|^2+\beta\,\mathrm{KL}\big(q(z|X)\,\|\,\mathcal{N}(0,I)\big)
-\]
+$$
 
 **水印插入点（按你实现只讲一种）：**
 
-- 改初始 \(z_T\) 或种子：实现简单，经很多步去噪 + vocoder 后多比特易糊。
-- 改条件 \(c\) 或中间 \(z_t\)：和模型结构同尺度，鲁棒/听感较易折中。
-- 每步调制 \(\varepsilon_\theta\) 或 \(\mu_\theta\)：容量更好，要训/配解码器。
+- 改初始 $z_T$ 或种子：实现简单，经很多步去噪 + vocoder 后多比特易糊。
+- 改条件 $c$ 或中间 $z_t$：和模型结构同尺度，鲁棒/听感较易折中。
+- 每步调制 $\varepsilon_\theta$ 或 $\mu_\theta$：容量更好，要训/配解码器。
 
 vocoder 本身是失真源，**评测必须跑完整「latent → mel → 波」**，不能只在 mel 上报告 SNR。
 
 #### 4.10.6 DiffWave：波形上的离散扩散
 
-直接在 \(x\in\mathbb{R}^{L}\) 波形上做 \(q(x_t|x_0)\)，网络多为带膨胀卷积的 WaveNet 式 \(\varepsilon_\theta\)。没有 VAE，路径短、控制直接，对幅度扰动更敏感。条件可以是 mel（声码器用法）或更弱的全局条件。水印写在波形噪声里会更「听得见」，强度要更小。
+直接在 $x\in\mathbb{R}^{L}$ 波形上做 $q(x_t|x_0)$，网络多为带膨胀卷积的 WaveNet 式 $\varepsilon_\theta$。没有 VAE，路径短、控制直接，对幅度扰动更敏感。条件可以是 mel（声码器用法）或更弱的全局条件。水印写在波形噪声里会更「听得见」，强度要更小。
 
 #### 4.10.7 PriorGrad：数据自适应先验
 
-标准 DDPM 的 \(x_T\sim\mathcal{N}(0,I)\)。PriorGrad 用数据相关对角协方差 \(\Sigma(c)\)（由能量或 mel 估计）：
+标准 DDPM 的 $x_T\sim\mathcal{N}(0,I)$。PriorGrad 用数据相关对角协方差 $\Sigma(c)$（由能量或 mel 估计）：
 
-\[
+$$
 q(x_t\mid x_0,c)=\mathcal{N}\big(\sqrt{\bar\alpha_t}\,x_0,\;(1-\bar\alpha_t)\Sigma(c)\big)
-\]
+$$
 
 网络在该先验下学去噪，收敛往往更快。  
-**接到水印：** 不能把「标准高斯扰动」直接抄过来；嵌入和解码都要在 \(\Sigma(c)^{1/2}\) 的尺度里做，否则能量大的频带和水印幅度对不齐。
+**接到水印：** 不能把「标准高斯扰动」直接抄过来；嵌入和解码都要在 $\Sigma(c)^{1/2}$ 的尺度里做，否则能量大的频带和水印幅度对不齐。
 
 #### 4.10.8 生成中写入的通用形态
 
-把水印比特 \(m\)（密钥派生）看成对轨迹的轻量干预。例如逐步调制：
+把水印比特 $m$（密钥派生）看成对轨迹的轻量干预。例如逐步调制：
 
-\[
+$$
 \varepsilon_\theta^{(w)}(x_t,t,c)=\varepsilon_\theta(x_t,t,c)+\eta\cdot \phi(m,t)
-\]
+$$
 
-\(\eta\) 小 → 听感好、难提取；\(\eta\) 大 → 反。解码器 \(D\) 做相关或假设检验：
+$\eta$ 小 → 听感好、难提取；$\eta$ 大 → 反。解码器 $D$ 做相关或假设检验：
 
-\[
+$$
 \hat m=D(\tilde x),\qquad
 \tilde x=\mathcal{A}(x)
-\]
+$$
 
-\(\mathcal{A}\) 是压缩/重采样/裁剪等攻击。同步：裁剪破坏对齐时，用重复嵌入或前导序列；或退化为盲检测「有/无」而不恢复满比特。
+$\mathcal{A}$ 是压缩/重采样/裁剪等攻击。同步：裁剪破坏对齐时，用重复嵌入或前导序列；或退化为盲检测「有/无」而不恢复满比特。
 
 #### 4.10.9 听感与误差公式
 
-信号功率 \(P_s\)、误差 \(e=\hat x-x\)：
+信号功率 $P_s$、误差 $e=\hat x-x$：
 
-\[
+$$
 \mathrm{SNR}=10\log_{10}\frac{\|x\|_2^2}{\|e\|_2^2}
-\]
+$$
 
-PESQ：ITU 感知模型，输出约 \(-0.5\sim 4.5\)，专门为语音设计，**不是**通用音乐指标。  
+PESQ：ITU 感知模型，输出约 $-0.5\sim 4.5$，专门为语音设计，**不是**通用音乐指标。  
 MOS：人打 1–5 分，要报样本量和是否盲听。  
 **坑：** SNR 高仍可能有可闻谐波；PESQ 高不等于水印不可感知。三个都要，且攻击组要同时看提取率和听感——攻击把声音毁了再去不掉水印，没有意义。
 
@@ -697,102 +703,102 @@ MSE 上界：在给定消息分布和码本下，每个胞腔内的最大/平均
 
 #### 5.6.1 一维 QIM（Chen & Wornell）
 
-量化步长 \(\Delta\)。消息 \(m\in\{0,1\}\) 对应两套交错码本，例如：
+量化步长 $\Delta$。消息 $m\in\{0,1\}$ 对应两套交错码本，例如：
 
-\[
+$$
 \Lambda_0=\Delta\mathbb{Z},\qquad
 \Lambda_1=\Delta\mathbb{Z}+\frac{\Delta}{2}
-\]
+$$
 
-嵌入：把宿主 \(x\) 量化到对应码本最近元
+嵌入：把宿主 $x$ 量化到对应码本最近元
 
-\[
+$$
 s=Q_{\Lambda_m}(x)=\arg\min_{c\in\Lambda_m}|x-c|
-\]
+$$
 
 提取：看接收点离哪套码本更近
 
-\[
+$$
 \hat m=\arg\min_{m\in\{0,1\}}\big|y-Q_{\Lambda_m}(y)\big|
-\]
+$$
 
-均匀宿主、均匀消息时，量化误差大约在 \(\Delta/4\) 量级，MSE 随 \(\Delta^2\) 涨。步长大 → 更鲁棒更吵；步长小 → 更透明更脆。
+均匀宿主、均匀消息时，量化误差大约在 $\Delta/4$ 量级，MSE 随 $\Delta^2$ 涨。步长大 → 更鲁棒更吵；步长小 → 更透明更脆。
 
 带补偿的 DC-QIM（减小失真）：
 
-\[
-s=x+\alpha\big(Q_{\Lambda_m}(x)-x\big),\qquad 0<\alpha\le 1
-\]
+$$
+s=x+\alpha\big(Q_{\Lambda_m}(x)-x\big),\qquad 0\lt\alpha\le 1
+$$
 
-\(\alpha=1\) 退回纯 QIM；\(\alpha<1\) 只走一部分路，听感更好、抗噪更差。
+$\alpha=1$ 退回纯 QIM；$\alpha\lt 1$ 只走一部分路，听感更好、抗噪更差。
 
 #### 5.6.2 格与 Voronoi、陪集
 
-\(n\) 维格 \(\Lambda=\{Gz:z\in\mathbb{Z}^n\}\)，\(G\) 是生成矩阵。Voronoi 胞腔：
+$n$ 维格 $\Lambda=\{Gz:z\in\mathbb{Z}^n\}$，$G$ 是生成矩阵。Voronoi 胞腔：
 
-\[
+$$
 \mathcal{V}(\Lambda)=\big\{x:\|x\|\le \|x-\lambda\|,\;\forall\lambda\in\Lambda\setminus\{0\}\big\}
-\]
+$$
 
-量化就是把点投到所在胞腔的格点。陪集 \(\Lambda+d\) 是整格平移，QIM 用不同陪集代表不同消息。归一化二次矩（越小越好）：
+量化就是把点投到所在胞腔的格点。陪集 $\Lambda+d$ 是整格平移，QIM 用不同陪集代表不同消息。归一化二次矩（越小越好）：
 
-\[
+$$
 G(\Lambda)=\frac{1}{n\,V^{1+2/n}}\int_{\mathcal{V}}\|x\|^2\,dx
-\]
+$$
 
-\(V=\mathrm{Vol}(\mathcal{V})\)。同样体积下，球堆积更密的格 \(G(\Lambda)\) 更小，量化 MSE 更低。
+$V=\mathrm{Vol}(\mathcal{V})$。同样体积下，球堆积更密的格 $G(\Lambda)$ 更小，量化 MSE 更低。
 
 #### 5.6.3 常见格（你实验用过的）
 
 | 格 | 维数 | 面试一句话 |
 |----|------|------------|
-| \(\mathbb{Z}\) | 1 | 整数格，基线 |
-| \(A_2\) | 2 | 六边形格，平面最密 |
-| \(D_4\) | 4 | 棋盘格，中等增益 |
-| \(E_8\) | 8 | 8 维极密，量化增益明显 |
+| $\mathbb{Z}$ | 1 | 整数格，基线 |
+| $A_2$ | 2 | 六边形格，平面最密 |
+| $D_4$ | 4 | 棋盘格，中等增益 |
+| $E_8$ | 8 | 8 维极密，量化增益明显 |
 
-MD-QIM：把连续 \(n\) 个宿主样本当成一个向量，在 \(\Lambda\) 上量化。维数越高、格越好，同样信息率下平均移动越小。这就是简历里 E8 上 QIM 0.0457、MD-QIM 0.0271 已经先降一截的原因——**还没动消息分布，只是换了几何。**
+MD-QIM：把连续 $n$ 个宿主样本当成一个向量，在 $\Lambda$ 上量化。维数越高、格越好，同样信息率下平均移动越小。这就是简历里 E8 上 QIM 0.0457、MD-QIM 0.0271 已经先降一截的原因——**还没动消息分布，只是换了几何。**
 
 #### 5.6.4 均匀假设错在哪
 
-设消息 \(M\) 的真实分布 \(P(M=0)=p_0\)（LDPC 等常有 \(p_0\approx 0.9\)），宿主落入陪集 \(C\)。经典 QIM 按 \(P(M=0)=1/2\) 铺码本，等价于把一半「好位置」（很多宿主已经在、不用动）分给很少出现的 bit 1。需要移动的概率被高估，MSE 里有一项纯属浪费。
+设消息 $M$ 的真实分布 $P(M=0)=p_0$（LDPC 等常有 $p_0\approx 0.9$），宿主落入陪集 $C$。经典 QIM 按 $P(M=0)=1/2$ 铺码本，等价于把一半「好位置」（很多宿主已经在、不用动）分给很少出现的 bit 1。需要移动的概率被高估，MSE 里有一项纯属浪费。
 
 #### 5.6.5 CA-QIM：共现 → 重映射 → 边界移动
 
 **(1) 共现统计。** 在训练集上估计
 
-\[
+$$
 \hat P(C=c,M=m)
-\]
+$$
 
-**(2) 码本重映射。** 求分配 \(\pi\)：每个宿主陪集 \(c\) 优先对应高频消息，使「零移动就能表示目标消息」的概率最大：
+**(2) 码本重映射。** 求分配 $\pi$：每个宿主陪集 $c$ 优先对应高频消息，使「零移动就能表示目标消息」的概率最大：
 
-\[
+$$
 \max_\pi \sum_{c}\hat P\big(C=c,\,M=\pi(c)\big)
-\]
+$$
 
 （实现上常按共现贪心或匈牙利匹配；口述到「高频消息占更大、更近的区域」即可。）
 
 **(3) 非零移动走 Voronoi 边界。** 若当前点所属陪集与目标消息不一致，不要跳到目标码本中心（那是最远的稳妥点），而是推到两个胞腔的分界面——**刚好能改判、位移最小**：
 
-\[
+$$
 s=x+\alpha(b(x,m)-x)
-\]
+$$
 
-\(b(x,m)\) 是指向目标决策域的边界点。这是「最小充分移动」，不是「量化到码字中心」。
+$b(x,m)$ 是指向目标决策域的边界点。这是「最小充分移动」，不是「量化到码字中心」。
 
 #### 5.6.6 非均匀消息下的 MSE 上界（口述推导）
 
-把空间按（宿主陪集、消息）划分。零移动区域贡献 0；移动区域的误差不超过「从胞腔内一点到目标边界/码字」的最大平方距离 \(D_{\max}(c\to m)\)，或用胞腔二阶矩 \(\mathbb{E}[\|X-Q(X)\|^2\mid c,m]\)。加权：
+把空间按（宿主陪集、消息）划分。零移动区域贡献 0；移动区域的误差不超过「从胞腔内一点到目标边界/码字」的最大平方距离 $D_{\max}(c\to m)$，或用胞腔二阶矩 $\mathbb{E}[\|X-Q(X)\|^2\mid c,m]$。加权：
 
-\[
+$$
 \mathrm{MSE}\le \sum_{c,m}\hat P(c,m)\,d^2_{\pi}(c,m)
-\]
+$$
 
-均匀码本相当于 \(\pi\) 无视 \(\hat P(c,m)\)，界更松。CA-QIM 让 \(\hat P\) 大的项对应 \(d^2\approx 0\)，所以界和实测一起下降。
+均匀码本相当于 $\pi$ 无视 $\hat P(c,m)$，界更松。CA-QIM 让 $\hat P$ 大的项对应 $d^2\approx 0$，所以界和实测一起下降。
 
-**数字（简历，E8，\(p_0=0.9\)）：** QIM \(0.0457\) → MD-QIM \(0.0271\) → CA-QIM \(0.0203\)，PSNR \(64.08\,\mathrm{dB}\)。  
-PSNR 与 MSE 关系：\(\mathrm{PSNR}=10\log_{10}(\mathrm{MAX}^2/\mathrm{MSE})\)，物理层常用归一化幅度，MAX 按你们论文定义说。PRD 是医学信号常用相对失真。
+**数字（简历，E8，$p_0=0.9$）：** QIM $0.0457$ → MD-QIM $0.0271$ → CA-QIM $0.0203$，PSNR $64.08\,\mathrm{dB}$。  
+PSNR 与 MSE 关系：$\mathrm{PSNR}=10\log_{10}(\mathrm{MAX}^2/\mathrm{MSE})$，物理层常用归一化幅度，MAX 按你们论文定义说。PRD 是医学信号常用相对失真。
 
 **面试 30 秒版：** 均匀 QIM 假设错了；我用共现改码本，让最常见的比特尽量不用动，必须动就只动到边界。格负责几何增益，重映射负责分布增益，两件事乘在一起。
 
@@ -842,53 +848,53 @@ Frodo 基于普通 LWE，结构少、分析保守，竞赛里好讲「抗量子�
 
 #### 6.7.1 LWE 一句话
 
-密钥 \(s\)，随机矩阵 \(A\)，小噪声 \(e\)：
+密钥 $s$，随机矩阵 $A$，小噪声 $e$：
 
-\[
+$$
 b=As+e \pmod q
-\]
+$$
 
-有噪声时像随机，无噪声 \(e=0\) 则是线性方程组可解。量子算法目前没有对一般 LWE 的多项式破解（Shor 打的是 RSA/ECC 的周期问题，不是 LWE）。
+有噪声时像随机，无噪声 $e=0$ 则是线性方程组可解。量子算法目前没有对一般 LWE 的多项式破解（Shor 打的是 RSA/ECC 的周期问题，不是 LWE）。
 
 #### 6.7.2 FrodoPKE 流程（矩阵版 LWE）
 
-参数模数 \(q\)，矩阵尺寸由安全级别定。噪声分布是小整数（离散高斯或 CBD 一类）。
+参数模数 $q$，矩阵尺寸由安全级别定。噪声分布是小整数（离散高斯或 CBD 一类）。
 
-- **KeyGen：** 采样 \(A\)、密钥 \(S\) 和噪声 \(E\)，公钥 \(B=AS+E\)。
-- **Encrypt(\(\mu\))：** 采样 \(S',E',E''\)，
+- **KeyGen：** 采样 $A$、密钥 $S$ 和噪声 $E$，公钥 $B=AS+E$。
+- **Encrypt($\mu$)：** 采样 $S',E',E''$，
 
-\[
+$$
 B'=S'A+E',\qquad
 V=S'B+E''+\mathrm{Encode}(\mu)
-\]
+$$
 
-密文就是 \((C_1,C_2)=(B',V)\)。
+密文就是 $(C_1,C_2)=(B',V)$。
 
 - **Decrypt：**
 
-\[
+$$
 V-B'S
 =S'E-E'S+E''+\mathrm{Encode}(\mu)
 \approx\mathrm{Encode}(\mu)
-\]
+$$
 
-因为 \(S'E,E'S,E''\) 都小。再 \(\mathrm{Decode}\) 还原 \(\mu\)。
+因为 $S'E,E'S,E''$ 都小。再 $\mathrm{Decode}$ 还原 $\mu$。
 
 **人话：** 解密靠「交叉项噪声加起来还不够翻过量化格子」。Encode 一般是把比特放到系数的高位，中间留间隙当容错。
 
 #### 6.7.3 为什么密文还能 LSB 嵌入
 
-把 \(C_1\) 或 \(C_2\) 的系数最低 1–2 bit 改掉，等价于再加一个有界扰动 \(e_{\mathrm{steg}}\)：
+把 $C_1$ 或 $C_2$ 的系数最低 1–2 bit 改掉，等价于再加一个有界扰动 $e_{\mathrm{steg}}$：
 
-\[
+$$
 \tilde V=V+e_{\mathrm{steg}}
-\]
+$$
 
-解密变成 \(\mathrm{Encode}(\mu)+e_{\mathrm{nat}}+e_{\mathrm{steg}}\)。只要
+解密变成 $\mathrm{Encode}(\mu)+e_{\mathrm{nat}}+e_{\mathrm{steg}}$。只要
 
-\[
-\|e_{\mathrm{nat}}+e_{\mathrm{steg}}\|_\infty < \text{Decode 容限}
-\]
+$$
+\|e_{\mathrm{nat}}+e_{\mathrm{steg}}\|_\infty \lt \text{Decode 容限}
+$$
 
 明文不变，同时这些 LSB 就是隐写信道。容量：每系数 2 bit × 系数个数 = 10368 bit（约 1296 字节/英文字符，按 8 bit 计）。再加码率会顶满预算 → 解密失败，所以零误码是「嵌在容限内」，不是密码被攻破。
 
@@ -896,13 +902,13 @@ V-B'S
 
 #### 6.7.4 和 Kyber 的差别（别讲错）
 
-Kyber 用模格 \(R_q=\mathbb{Z}_q[x]/(x^n+1)\) 和 NTT 乘多项式，密文有固定编码、压缩。乱改 bit 更容易碰到压缩/NTT 约束。Frodo 是普通矩阵 LWE，系数更「平」，竞赛里当载体更直观。Kyber 更快、NIST 主推 KEM；我们优化目标是验证信道，不是 TLS 握手性能。
+Kyber 用模格 $R_q=\mathbb{Z}_q[x]/(x^n+1)$ 和 NTT 乘多项式，密文有固定编码、压缩。乱改 bit 更容易碰到压缩/NTT 约束。Frodo 是普通矩阵 LWE，系数更「平」，竞赛里当载体更直观。Kyber 更快、NIST 主推 KEM；我们优化目标是验证信道，不是 TLS 握手性能。
 
 #### 6.7.5 哈希链日志（系统侧公式）
 
-\[
+$$
 h_i=H(\mathrm{payload}_i\|h_{i-1}\|t_i)
-\]
+$$
 
 改历史任意一条，后面哈希全对不上。这是审计完整性，**不是**共识，不要说区块链。
 
@@ -987,11 +993,11 @@ LlamaIndex：索引、检索、文档连接更强，适合 RAG 中台。
 
 #### 语言模型目标
 
-给定上文 \(w_{<k}\)，预测下一个 token：
+给定上文 $w_{\lt k}$，预测下一个 token：
 
-\[
-\mathcal{L}_{\mathrm{LM}}=-\sum_{k}\log p_\theta(w_k\mid w_{<k})
-\]
+$$
+\mathcal{L}_{\mathrm{LM}}=-\sum_{k}\log p_\theta(w_k\mid w_{\lt k})
+$$
 
 Chat/SFT 只在 assistant 片段上算损失，系统提示和用户话不回传梯度（mask）。这是「教它按格式说话」，不是再做一遍预训练。
 
@@ -999,16 +1005,16 @@ Chat/SFT 只在 assistant 片段上算损失，系统提示和用户话不回传
 
 softmax 温度：
 
-\[
+$$
 p_i=\frac{\exp(\ell_i/T)}{\sum_j\exp(\ell_j/T)}
-\]
+$$
 
-- \(T\to 0\)：近似 greedy，稳但死板。
-- \(T\) 大：更随机。
-- top-\(k\)：只保留 logit 最大的 \(k\) 个再归一化。
-- top-\(p\)（nucleus）：按概率从大到小累加到 \(p\) 再截断。
+- $T\to 0$：近似 greedy，稳但死板。
+- $T$ 大：更随机。
+- top-$k$：只保留 logit 最大的 $k$ 个再归一化。
+- top-$p$（nucleus）：按概率从大到小累加到 $p$ 再截断。
 
-Agent 调工具时常用低 \(T\) / greedy，减少胡编函数名。
+Agent 调工具时常用低 $T$ / greedy，减少胡编函数名。
 
 #### Function Calling
 
@@ -1024,12 +1030,12 @@ Agent 调工具时常用低 \(T\) / greedy，减少胡编函数名。
 
 每步采样
 
-\[
+$$
 a_t\sim \pi_\theta(\cdot\mid s_t),\qquad
 s_{t+1}=\mathrm{Env}(s_t,a_t)
-\]
+$$
 
-\(s_t\) 是对话 + 工具史。终止：Final Answer、步数上限、或人工接管。循环检测：同一工具同一参数连续命中则打断。
+$s_t$ 是对话 + 工具史。终止：Final Answer、步数上限、或人工接管。循环检测：同一工具同一参数连续命中则打断。
 
 ---
 
@@ -1077,42 +1083,43 @@ s_{t+1}=\mathrm{Env}(s_t,a_t)
 
 #### 嵌入相似度
 
-文档块 \(d\)、查询 \(q\) 经同一（或双塔）编码器得到 \(\ell_2\) 归一化向量，余弦 = 点积：
+文档块 $d$、查询 $q$ 经同一（或双塔）编码器得到 $\ell_2$ 归一化向量，余弦 = 点积：
 
-\[
+$$
 \mathrm{sim}(q,d)=e(q)^\top e(d)
-\]
+$$
 
-向量库做近似最近邻（HNSW / IVF），取 top-\(k\)。阈值 \(\tau\)：\(\max_d\mathrm{sim}<\tau\) 则拒答。
+向量库做近似最近邻（HNSW / IVF），取 top-$k$。阈值 $\tau$：$\max_d\mathrm{sim}\lt\tau$ 则拒答。
 
 #### 切分
 
-块长 \(L\)、重叠 \(o\)。\(L\) 太大：噪声多、嵌入被冲淡；\(L\) 太小：没有完整事实。重叠是为了避免句子在边界被切断。经验：中文 300–800 字、按标题切，表格尽量整表或整行。
+块长 $L$、重叠 $o$。$L$ 太大：噪声多、嵌入被冲淡；$L$ 太小：没有完整事实。重叠是为了避免句子在边界被切断。经验：中文 300–800 字、按标题切，表格尽量整表或整行。
 
 #### BM25（稀疏，专名友好）
 
-对词 \(t\)：
+对词 $t$：
 
-\[
+$$
 \mathrm{IDF}(t)=\ln\frac{N-n_t+0.5}{n_t+0.5}
-\]
-\[
-\mathrm{BM25}(q,d)=\sum_{t\in q}\mathrm{IDF}(t)\cdot\frac{f(t,d)(k_1+1)}{f(t,d)+k_1(1-b+b\cdot |d|/\mathrm{avgdl})}
-\]
+$$
 
-\(f\) 是词频，\(k_1,b\) 是超参。编号、人名、条款号向量模型容易糊，BM25 能抓住字面。
+$$
+\mathrm{BM25}(q,d)=\sum_{t\in q}\mathrm{IDF}(t)\cdot\frac{f(t,d)(k_1+1)}{f(t,d)+k_1(1-b+b\cdot |d|/\mathrm{avgdl})}
+$$
+
+$f$ 是词频，$k_1,b$ 是超参。编号、人名、条款号向量模型容易糊，BM25 能抓住字面。
 
 #### 混合检索
 
-\[
+$$
 \mathrm{score}=\lambda\,\mathrm{norm}(\mathrm{sim})+(1-\lambda)\,\mathrm{norm}(\mathrm{BM25})
-\]
+$$
 
-或 Reciprocal Rank Fusion：\(\sum_i 1/(k+r_i)\)。然后再用交叉编码器 rerank（query 和 doc 拼在一起过 Transformer 打分），只把前 \(n\) 条（如 3–8）给 LLM。
+或 Reciprocal Rank Fusion：$\sum_i 1/(k+r_i)$。然后再用交叉编码器 rerank（query 和 doc 拼在一起过 Transformer 打分），只把前 $n$ 条（如 3–8）给 LLM。
 
 #### 生成时的忠实度
 
-把检索片段当条件：\(p(a\mid q,d_1,\ldots,d_n)\)。评测不要只看流畅：
+把检索片段当条件：$p(a\mid q,d_1,\ldots,d_n)$。评测不要只看流畅：
 
 - Recall@k：金文档有没有进检索。
 - 答案正确 vs 片段忠实（有金句却编了数字，算幻觉）。
@@ -1135,14 +1142,14 @@ VLM 项目就是在 CLIP / BLIP / SigLIP 上微调。区分：
 
 大模型出数据或出 logit，小模型学。目的是部署成本和延迟，不是追求比教师更强。要有学生自己的评测集，防止只学会教师的废话。我有「加约束后主任务掉点」的评测习惯，可以迁过来。
 
-**公式：** 教师 \(p_T\)、学生 \(p_S\)，温度 \(T\) 软化：
+**公式：** 教师 $p_T$、学生 $p_S$，温度 $T$ 软化：
 
-\[
+$$
 \mathcal{L}_{\mathrm{KD}}=T^2\,\mathrm{KL}\big(\mathrm{softmax}(\ell_T/T)\,\|\,\mathrm{softmax}(\ell_S/T)\big)
 +\lambda\,\mathrm{CE}(y,p_S)
-\]
+$$
 
-也可以只对学生生成教师的回答（数据蒸馏），不必对齐全部 logit。特征蒸馏则对齐中间层。\(T\) 大：教师分布更软，学生学类别之间的相似关系。
+也可以只对学生生成教师的回答（数据蒸馏），不必对齐全部 logit。特征蒸馏则对齐中间层。$T$ 大：教师分布更软，学生学类别之间的相似关系。
 
 ### 10.3 vLLM
 
@@ -1153,13 +1160,13 @@ VLM 项目就是在 CLIP / BLIP / SigLIP 上微调。区分：
 
 关注：并发下的 TTFT、TPOT、吞吐、显存。适合多用户 API。不是训练框架。
 
-**原理（能画就加分）：** Transformer 每层每个 token 要缓存 \(K,V\)。序列长度 \(L\)、层数 \(n\)、头数 \(h\)、头维 \(d\)，粗估
+**原理（能画就加分）：** Transformer 每层每个 token 要缓存 $K,V$。序列长度 $L$、层数 $n$、头数 $h$、头维 $d$，粗估
 
-\[
+$$
 \mathrm{KV\ bytes}\approx 2\cdot n_{\mathrm{layers}}\cdot L\cdot n_{\mathrm{kv\ heads}}\cdot d\cdot b
-\]
+$$
 
-\(b=2\) 为 FP16。传统实现按「最大长度」整块预分配，短请求浪费、变长请求碎片多，并发上不去。PagedAttention 把 KV 切成固定页（类似 OS 虚拟内存），逻辑连续、物理散页，块表映射。请求结束立刻还页。
+$b=2$ 为 FP16。传统实现按「最大长度」整块预分配，短请求浪费、变长请求碎片多，并发上不去。PagedAttention 把 KV 切成固定页（类似 OS 虚拟内存），逻辑连续、物理散页，块表映射。请求结束立刻还页。
 
 连续批处理：decode 阶段每步各请求只出一个 token，把这些 token 打成一批；新请求的 prefill 可以插进来。于是显存按真实占用走，吞吐随并发升。
 
@@ -1181,9 +1188,9 @@ INT8 / INT4 降显存和带宽。AWQ / GPTQ 是权重量化常见做法。风险
 
 均匀量化示意：
 
-\[
+$$
 \hat w=\mathrm{clip}\Big(\mathrm{round}\frac{w}{s},\;q_{\min},q_{\max}\Big)\cdot s
-\]
+$$
 
 GPTQ：用二阶信息逐层减小量化误差。AWQ：保护激活幅度大的通道（scale 再量化）。KV cache 量化还能再挤并发。口述抓住：**权重量化换显存和带宽，激活/KV 另算；必须业务回归，PPL 只是参考。**
 
@@ -1236,23 +1243,23 @@ AI 好不好不能靠体感。我做过：主任务精度、水印成功率、PS
 
 ### 11.1 原理与公式（LDM / VAE / UNet·DiT / CFG / FID）
 
-和音频扩散是同一套 \(x_t=\sqrt{\bar\alpha_t}x_0+\sqrt{1-\bar\alpha_t}\varepsilon\)，只是 \(x_0\) 换成图像 latent。
+和音频扩散是同一套 $x_t=\sqrt{\bar\alpha_t}x_0+\sqrt{1-\bar\alpha_t}\varepsilon$，只是 $x_0$ 换成图像 latent。
 
-**VAE：** 图像 \(x\) → 编码器给 \(\mu,\log\sigma^2\)，\(z=\mu+\sigma\odot\varepsilon\)，解码 \(\hat x\)。损失重构 + KL 拉向标准正态。Stable Diffusion 在这个 \(z\) 上扩散，空间大约是像素的 \(1/8\)，算力从 \(H\times W\) 降到 \(h\times w\)。
+**VAE：** 图像 $x$ → 编码器给 $\mu,\log\sigma^2$，$z=\mu+\sigma\odot\varepsilon$，解码 $\hat x$。损失重构 + KL 拉向标准正态。Stable Diffusion 在这个 $z$ 上扩散，空间大约是像素的 $1/8$，算力从 $H\times W$ 降到 $h\times w$。
 
-**UNet：** 下采样–中间–上采样，skip 连接保留空间细节；文本用 cross-attn：\(Q\) 来自图像特征，\(K,V\) 来自文本 token。
+**UNet：** 下采样–中间–上采样，skip 连接保留空间细节；文本用 cross-attn：$Q$ 来自图像特征，$K,V$ 来自文本 token。
 
 **DiT：** 把 latent 切 patch，用 Transformer + AdaLN 注入时间步和条件，是 SD3/Sora 系的骨干。口述：「同一套注意力，条件通过自适应归一化进去。」
 
-**CFG：** 与 4.10.4 相同，\(\tilde\varepsilon=\varepsilon_\varnothing+s(\varepsilon_c-\varepsilon_\varnothing)\)。\(s\) 常取 7–12（图）或更低（有的模型 3–5）。高 \(s\) 更贴词、更假、更过饱和。
+**CFG：** 与 4.10.4 相同，$\tilde\varepsilon=\varepsilon_\varnothing+s(\varepsilon_c-\varepsilon_\varnothing)$。$s$ 常取 7–12（图）或更低（有的模型 3–5）。高 $s$ 更贴词、更假、更过饱和。
 
 **采样器：** Euler/DPM++/DDIM 都是解同一概率流 ODE 的不同离散；步数 20–30 常够，再加边际小。种子固定 + 确定采样才能复现。
 
 **FID：** 用 Inception 特征的高斯拟合，
 
-\[
+$$
 \mathrm{FID}=\|\mu_r-\mu_g\|_2^2+\mathrm{Tr}\big(\Sigma_r+\Sigma_g-2(\Sigma_r\Sigma_g)^{1/2}\big)
-\]
+$$
 
 测分布距离，不保证单张图语义对。CLIP-score 补「图和 prompt 是否对齐」。视频还要时序一致性（相邻帧差、光流）。水印节点：VAE decode 之后或 latent 里，和音频「vocoder 前/后」是同一问题。
 
@@ -1356,7 +1363,7 @@ JD 是 16–30K。按杭州和岗位，用总包匹配能力：能独立交付�
 
 ### A. 开口就会被问，不会就危险
 
-- CLIP 对齐、BLIP 任务、LoRA；能手写 InfoNCE 和 \(W_0+BA\)
+- CLIP 对齐、BLIP 任务、LoRA；能手写 InfoNCE 和 $W_0+BA$
 - 水印三类：模型确权 / 内容溯源 / 生成溯源
 - 扩散模型一步流程
 - RAG 七段、ReAct、工具调用
@@ -1420,34 +1427,34 @@ JD 是 16–30K。按杭州和岗位，用总包匹配能力：能独立交付�
 
 ### A.1 交叉熵、KL、softmax
 
-多分类真实分布 \(p\)（one-hot）、模型 \(q=\mathrm{softmax}(\ell)\)：
+多分类真实分布 $p$（one-hot）、模型 $q=\mathrm{softmax}(\ell)$：
 
-\[
+$$
 \mathrm{CE}(p,q)=-\sum_i p_i\log q_i
-\]
+$$
 
-对 one-hot 标签 \(y\)：\(\mathrm{CE}=-\log q_y\)。KL：
+对 one-hot 标签 $y$：$\mathrm{CE}=-\log q_y$。KL：
 
-\[
+$$
 \mathrm{KL}(p\|q)=\sum_i p_i\log\frac{p_i}{q_i}=\mathrm{CE}(p,q)-H(p)
-\]
+$$
 
-\(H(p)\) 与模型无关，所以 **最小化 CE 和最小化 KL 在监督学习里等价**。蒸馏时 \(p\) 是教师软标签，\(H(p)\) 不是常数意义上的「可忽略」，但仍常直接优化 \(\mathrm{KL}(p_T\|p_S)\)。
+$H(p)$ 与模型无关，所以 **最小化 CE 和最小化 KL 在监督学习里等价**。蒸馏时 $p$ 是教师软标签，$H(p)$ 不是常数意义上的「可忽略」，但仍常直接优化 $\mathrm{KL}(p_T\|p_S)$。
 
 **约束干净输出为什么常用 KL 而不是 CE：** CE 对着硬标签会把概率推到 1；KL 对着原模型分布，是「保持原来的软行为」，更适合「不要忘事、不要乱触发」。
 
-softmax 对 logit 的梯度：\(\partial q_i/\partial\ell_j=q_i(\delta_{ij}-q_j)\)。温度 \(T\) 相当于把 \(\ell\) 除以 \(T\)，分布变平。
+softmax 对 logit 的梯度：$\partial q_i/\partial\ell_j=q_i(\delta_{ij}-q_j)$。温度 $T$ 相当于把 $\ell$ 除以 $T$，分布变平。
 
 ### A.2 残差、LayerNorm、位置编码
 
-残差：\(\mathrm{out}=x+F(x)\)，梯度可走捷径，深层才训得动。
+残差：$\mathrm{out}=x+F(x)$，梯度可走捷径，深层才训得动。
 
 LayerNorm（对最后一维，每个 token 独立）：
 
-\[
+$$
 \hat x=\frac{x-\mu}{\sqrt{\sigma^2+\varepsilon}},\qquad
 y=\gamma\odot\hat x+\beta
-\]
+$$
 
 和 BatchNorm 的差别：BN 沿 batch 统计，推理要跑均值；LN 无此问题，NLP/ViT 更常用。
 
@@ -1455,7 +1462,7 @@ y=\gamma\odot\hat x+\beta
 
 ### A.3 显存账（微调时能算）
 
-参数 FP16：\(2|\theta|\) 字节。Adam 还要 m、v（常 FP32），大约再 \(8|\theta|\)。激活与 batch、序列长度、层数成正比。所以：
+参数 FP16：$2|\theta|$ 字节。Adam 还要 m、v（常 FP32），大约再 $8|\theta|$。激活与 batch、序列长度、层数成正比。所以：
 
 - 全参 7B 训不动就 LoRA：只存小矩阵梯度。
 - 梯度检查点用时间换激活。
@@ -1463,24 +1470,24 @@ y=\gamma\odot\hat x+\beta
 
 ### A.4 重复码 / 汉明 / BCH（音频多比特）
 
-重复 \(n\) 次、多数表决：能抗大约 \(\lfloor n/2\rfloor\) 个比特翻转，码率 \(1/n\)。  
-汉明 \((7,4)\)：4 信息位 3 校验，纠正 1 位错。  
+重复 $n$ 次、多数表决：能抗大约 $\lfloor n/2\rfloor$ 个比特翻转，码率 $1/n$。  
+汉明 $(7,4)$：4 信息位 3 校验，纠正 1 位错。  
 BCH/RS：纠更多突发错误，适合压缩造成的成片误码。  
 口述：**容量让给纠错**，确权 ID 只要几十 bit，不要追求藏一篇文章。
 
 ### A.5 SSIM（比 PSNR 多说一句）
 
-对窗口内亮度 \(\mu\)、方差 \(\sigma\)：
+对窗口内亮度 $\mu$、方差 $\sigma$：
 
-\[
+$$
 \mathrm{SSIM}(x,y)=\frac{(2\mu_x\mu_y+C_1)(2\sigma_{xy}+C_2)}{(\mu_x^2+\mu_y^2+C_1)(\sigma_x^2+\sigma_y^2+C_2)}
-\]
+$$
 
 接近 1 更好。DWT 水印要同时报 PSNR 和 SSIM：PSNR 对均匀噪声敏感，SSIM 对结构更敏感。
 
-### A.6 \(E_8\) 格（加分，不会就停在「8 维密堆积」）
+### A.6 $E_8$ 格（加分，不会就停在「8 维密堆积」）
 
-\(E_8\) 可看成 \(\mathbb{R}^8\) 中所有坐标为整数或半整数、且坐标和为偶数的点。它是 8 维最密格之一，kissing number 240，\(G(E_8)\) 明显小于 \(\mathbb{Z}^8\)。面试不要求背生成矩阵；要求：为什么同样 \(\Delta\) 下 E8 的 MSE 比 Z 小——**Voronoi 更圆，平均量化误差更低**。
+$E_8$ 可看成 $\mathbb{R}^8$ 中所有坐标为整数或半整数、且坐标和为偶数的点。它是 8 维最密格之一，kissing number 240，$G(E_8)$ 明显小于 $\mathbb{Z}^8$。面试不要求背生成矩阵；要求：为什么同样 $\Delta$ 下 E8 的 MSE 比 Z 小——**Voronoi 更圆，平均量化误差更低**。
 
 ### A.7 相关工作（避免「只知道自己」）
 
@@ -1494,15 +1501,15 @@ BCH/RS：纠更多突发错误，适合压缩造成的成片误码。
 
 ### A.8 手推清单（明天白纸能写就过关）
 
-1. Attention：\( \mathrm{softmax}(QK^\top/\sqrt{d})V \)
-2. CLIP：对称 InfoNCE，\(s_{ij}=f^\top g/\tau\)
-3. SigLIP：\(\log\sigma(\pm(t x^\top y+b))\)
-4. LoRA：\(W_0+BA\)
-5. DDPM：\(x_t=\sqrt{\bar\alpha_t}x_0+\sqrt{1-\bar\alpha_t}\varepsilon\)，损失 \(\|\varepsilon-\varepsilon_\theta\|^2\)
-6. CFG：\(\varepsilon_\varnothing+s(\varepsilon_c-\varepsilon_\varnothing)\)
+1. Attention：$\mathrm{softmax}(QK^\top/\sqrt{d})V$
+2. CLIP：对称 InfoNCE，$s_{ij}=f^\top g/\tau$
+3. SigLIP：$\log\sigma(\pm(t x^\top y+b))$
+4. LoRA：$W_0+BA$
+5. DDPM：$x_t=\sqrt{\bar\alpha_t}x_0+\sqrt{1-\bar\alpha_t}\varepsilon$，损失 $\|\varepsilon-\varepsilon_\theta\|^2$
+6. CFG：$\varepsilon_\varnothing+s(\varepsilon_c-\varepsilon_\varnothing)$
 7. QIM：两套码本量化；CA-QIM 再加非均匀重映射
-8. LWE：\(b=As+e\)，Frodo 解密噪声预算
-9. PSNR：\(10\log_{10}(\mathrm{MAX}^2/\mathrm{MSE})\)
+8. LWE：$b=As+e$，Frodo 解密噪声预算
+9. PSNR：$10\log_{10}(\mathrm{MAX}^2/\mathrm{MSE})$
 10. BM25 + 余弦混合检索
 
 每条配一句人话，见各章「人话」段。公式写对但说不出来，仍会减分。
@@ -1515,7 +1522,7 @@ BCH/RS：纠更多突发错误，适合压缩造成的成片误码。
 
 例（CLIP）：「形式化是 batch 内图文相似度做对称交叉熵；直观上就是配对要近、不配对要远，温度控制有多狠；我们加水印等于多了一批特殊正对，同时还要用干净样本 KL 把主任务钉住。」
 
-例（扩散水印）：「形式化是在 \(\varepsilon_\theta\) 或 \(x_T\) 上加密钥决定的偏移；直观上就是生成轨迹自带身份；实验用 SNR/PESQ 看偏移有没有吵到人，用压缩裁剪看还能不能抽出来。」
+例（扩散水印）：「形式化是在 $\varepsilon_\theta$ 或 $x_T$ 上加密钥决定的偏移；直观上就是生成轨迹自带身份；实验用 SNR/PESQ 看偏移有没有吵到人，用压缩裁剪看还能不能抽出来。」
 
 例（CA-QIM）：「形式化是陪集–消息共现上的码本分配，加边界最小移动；直观上 90% 都是 0，就别强迫一半格点给 1 预留；E8 上 MSE 从 0.0457 降到 0.0203。」
 
