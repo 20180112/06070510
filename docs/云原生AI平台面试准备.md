@@ -5,6 +5,8 @@
 
 线上面试：先人话，再名词。没上过集群就说「用户视角我熟，平台侧是系统补的知识」。
 
+**两份文档怎么用：** 本文是岗位口径和训练/推理题；Linux、Docker、K8s 从零拆开的命令和概念在 [`K8s与Linux基础-面试讲义.md`](K8s与Linux基础-面试讲义.md)。操作系统不熟就先把讲义 A、B、C 过一遍，再回本文第 4、8 节口头过题。
+
 ---
 
 ## 0. 这个岗在干什么
@@ -78,6 +80,8 @@
 
 ## 4. 云原生名词（必须能口头解释）
 
+下面是「面试要能开口」的浓缩版。命令、YAML、Pending 原因、namespace 和 cgroup 的细分见 [K8s 与 Linux 讲义](K8s与Linux基础-面试讲义.md)。
+
 **容器 Docker**  
 把代码、Python、CUDA 依赖打成镜像，换机器结果一致。训练任务 = 镜像 + 命令。  
 口头：「我本地 conda 能跑，平台上要用镜像，否则 CUDA 对不上。」
@@ -120,7 +124,7 @@ K8s 上的工作流：多步骤 DAG（预处理 → 训练 → 评测 → 导出
 
 平台岗比算法岗更爱问这些，和手撕 DP 可以并列准备。
 
-**OS：** 进程 vs 线程；虚拟内存；用户态/内核态；文件描述符；为什么 GPU 训练还要很多 CPU（DataLoader）。Linux：`top`/`nvidia-smi`、磁盘满、权限、环境变量。内核加分项了解即可：调度、cgroup 限制 CPU/内存，容器靠这个隔离。不要装内核开发。
+**OS：** 进程 vs 线程；虚拟内存；用户态/内核态；文件描述符；为什么 GPU 训练还要很多 CPU（DataLoader）。Linux：`top`/`nvidia-smi`、磁盘满、权限、环境变量。内核加分项了解即可：调度、cgroup 限制 CPU/内存，容器靠这个隔离。不要装内核开发。人话和命令见讲义 **A 节**。
 
 **网络：** TCP vs UDP；HTTP；训练梯度同步要高带宽低延迟；推理是客户端到网关到 Pod。端口、防火墙导致连不上是常见题。
 
@@ -174,9 +178,11 @@ DP/回溯手撕两边都可能有。Dropout、CE 有余力再说。RLHF 本岗�
 | 优先级 | 内容 |
 | --- | --- |
 | P0 | 介绍口径；训练循环 + DDP 概念；Docker/K8s Pod/Job/GPU；OOM 故事 |
+| P0-系统 | 讲义 A（Linux 文件/进程/nvidia-smi）+ B（镜像 vs 容器）+ C2–C6（Pod/Job/kubectl/Pending） |
 | P1 | 推理延迟吞吐、动态 batch；OSS vs NAS；Argo/Kubeflow 各一句话 |
-| P2 | 手撕哈希/链表/DP；Linux 常见命令；Go 不强制 |
-| 先放 | 内核源码、自己写调度器、vLLM 源码 |
+| P1-系统 | 讲义 C8 PVC、A6 进程线程/OOM、C10 能看懂 Job YAML |
+| P2 | 手撕哈希/链表/DP；Go 不强制；讲义 A7 cgroup/namespace |
+| 先放 | 内核源码、自己写调度器、vLLM 源码、自己搭 Kubeflow |
 
 ---
 
