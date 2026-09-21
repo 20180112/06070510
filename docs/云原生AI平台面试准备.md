@@ -84,17 +84,109 @@
 
 主问的还是训和推。部署是把这两段接起来的 **发布链路**。没上过生产就说：我按训练用户 + 平台要管的步骤设计，细节要和你们现有 K8s/Argo 对齐。
 
-### 一条链路（背这个）
+下面每个词都用人话对齐：你在实验室敲的命令，到平台上变成 YAML 里的哪一格。
 
-1. **训练 Job：** 镜像、命令、GPU、数据 PVC、日志。跑完得到 ckpt。  
-2. **评测 Job：** 同一套数据/指标（你水印会看主任务 + 水印/听感）。不通过不发布。  
-3. **导出/打包：** 权重 + 预处理 + 配置写进制品（或新镜像），版本号和训练任务 ID 绑在一起。  
-4. **注册：** 模型仓库记下：谁训的、超参、指标、镜像、GPU 规格。  
-5. **部署推理：** K8s **Deployment + Service**（不是 Job）。副本数、每副本 GPU、健康检查：liveness 慎用在加载很慢的模型上，**readiness** 等权重 load 完再接流量。  
-6. **发布：** 先小流量或新版本单独 Service，看延迟/错误率再切全量；不行就回滚上一版 Deployment。  
-7. **运行：** 看 QPS、P99、显存、GPU 利用率；扩容加副本（有卡才行）。
+### 先把词说清
 
-口头 40 秒：「平台上我会把训练、评测、导出做成工作流。评测过了才把制品注册上去，推理用长期跑的 Deployment，用 readiness 表示模型加载完。版本和训练任务对齐，出问题回滚。我没接过公司级网关，但这条链是训练用户最需要的。」
+**镜像（image）**  
+只读模板：操作系统 + CUDA + Python + PyTorch + 你的依赖。不是「一台正在跑的电脑」，是安装盘。  
+你本地 `conda` 能跑，换一台机器 CUDA 或 `torch` 版本不对就挂。平台要求所有人用同一份镜像，所以训练任务必须写镜像名，例如 `registry.company.com/watermark-train:cuda12.1-torch2.3`。  
+打镜像用 Dockerfile：`FROM nvidia/cuda:...`，再 `pip install`，再 `COPY` 代码。CUDA 版本要和节点驱动匹配，所以要**锁版本**。  
+推理可以另打一个更瘦的镜像：只留运行时，不塞训练用的优化器代码和编译器。
+
+**容器**  
+镜像跑起来的那一份进程。训练 Job = 起一个容器去执行下面的「命令」。容器删了，没挂盘的文件就没了，所以 ckpt 不能只写容器里的 `/tmp`。
+
+**命令（command / args）**  
+容器起来之后真正执行的那一行，相当于你自己敲的：
+
+`python train.py --lr 1e-4 --data /mnt/data --out /mnt/output --gpus 4`
+
+平台不会猜你要跑什么，必须写死：入口文件、超参、数据路径、输出路径。  
+K8s YAML 里就是 `command: ["python", "train.py"]` 和 `args: ["--lr", "1e-4"]`。  
+评测 Job 换一条命令，例如 `python eval.py --ckpt /mnt/output/best.pt`。推理 Deployment 的命令则是起 HTTP 服务，例如 `python serve.py --port 8000 --weights /mnt/model/model.pt`。
+
+**GPU / CPU / 内存**  
+向调度器要的资源。GPU 在 K8s 里常写成 `nvidia.com/gpu: 4`，表示这个 Pod 要 4 张卡。节点装了 Device Plugin 才会有这个资源名。  
+要不到就会 **Pending**：没闲卡、卡型号不对（A100 vs V100）、配额用完。  
+容器里往往再看到 `CUDA_VISIBLE_DEVICES=0,1,2,3`，这是映射进来的编号，不是整机物理编号。  
+CPU、内存也要报：DataLoader 预处理吃 CPU，报太小会喂不进 GPU。
+
+**PVC / 挂盘**  
+PersistentVolumeClaim：向集群要一块能活过 Pod 的盘。  
+训练至少两块逻辑盘（可以是同一个 NAS 下两个目录）：
+
+- 数据：只读或共享读，多机一起读常用 **NAS**（ReadWriteMany）  
+- 输出：写 ckpt、日志摘要、导出模型  
+
+对应 Docker 的 `-v /data:/mnt/data`。不挂盘 = 容器一删，权重没了。  
+OSS 适合归档和大包下载，直接当 DataLoader 随机读小文件往往慢，平台常先缓存到 NAS/本地 SSD。
+
+**环境变量**  
+`WANDB_API_KEY`、`NCCL_DEBUG`、路径前缀等。密钥用 Secret，不要写进镜像。超参也可以走 ConfigMap，但你面试说「命令行参数 + 环境变量」即可。
+
+**日志**  
+容器的标准输出 stdout/stderr。你本地是 `python train.py > out.log 2>&1`；平台上是 `kubectl logs` 或网页上拉流。loss、报错都走这里，所以训练脚本不要只写到容器内随便一个文件还不挂盘。
+
+**ckpt（checkpoint）**  
+定期保存的 `模型权重 + 优化器状态 + step`，为了断点续训。文件写在输出 PVC 上。  
+在线推理一般**不要**直接加载带优化器的完整 ckpt（又大又慢），而是导出一份「只含推理权重」的制品。
+
+**Job vs Deployment**  
+- Job：跑完退出。训练、评测、导出。失败可按 `backoffLimit` 重试。  
+- Deployment：保持 N 个副本一直在。推理服务。挂了自动拉起来。
+
+**Service**  
+Pod IP 会变。Service 给一个稳定名字和端口，例如 `http://vlm-infer:8000`，转到后面的推理 Pod。
+
+**readiness / liveness**  
+- readiness：模型权重 load 完、端口能服务了，才接流量。加载 2 分钟的扩散模型必须有，否则一开始全是失败请求。  
+- liveness：探活失败就重启。训练 Job 一般别乱加，训到一半会被杀。推理可以要，但超时要大于加载时间。
+
+### 一条链路（逐步，用你的水印任务举例）
+
+**1. 提交训练**  
+你在平台填（或 YAML 里写）：
+
+- 镜像：`watermark-train:cu12.1`（里面有 PyTorch、CLIP/扩散依赖）  
+- 命令：`python train.py --lr 1e-4 --data /mnt/data --out /mnt/output`  
+- 资源：`nvidia.com/gpu: 4`，CPU 8，内存 32Gi  
+- 挂盘：`/mnt/data` ← 数据集 PVC；`/mnt/output` ← ckpt PVC  
+- 重启：失败重试 2 次  
+
+调度器找有 4 张空卡的节点 → kubelet 拉镜像、挂盘、起容器 → 命令开始跑 → stdout 进日志 → 每隔 N step 把 ckpt 写到 `/mnt/output`。  
+退出码 0 则 Job 成功。
+
+**2. 评测**  
+再起一个 Job（可同一工作流下一步）：镜像可复用训练镜像，命令换成 `python eval.py --ckpt /mnt/output/best.pt`。  
+你的指标：VLM 看主任务精度和水印检出；音频看 PESQ/SNR/MOS 和失真后比特。不达标不往下走。
+
+**3. 导出**  
+再一个 Job 或训练末尾一步：`python export.py --ckpt ... --out /mnt/model/model.pt`  
+去掉 optimizer，只留推理要的权重和预处理配置。大文件可再拷到 OSS 归档，在线服务从 NAS 或 PVC 读这份瘦权重。
+
+**4. 注册**  
+平台记一条记录（模型仓库/元数据）：任务 ID、镜像 digest、命令和超参、评测分数、制品路径、建议 GPU 规格（例如推理 1 张 24G）。  
+这样别人能复现「这个服务是哪次训练来的」。
+
+**5. 部署推理**  
+新建 Deployment：
+
+- 镜像：更瘦的 `watermark-serve:v1`（或同一镜像换命令）  
+- 命令：`python serve.py --weights /mnt/model/model.pt --port 8000`  
+- GPU：通常 1 张起，按 QPS 加副本  
+- 挂盘：只挂模型制品，不挂整份 ImageNet  
+- readiness：访问 `/health` 或等模型 `load_state_dict` 完成  
+
+前面加 Service：集群内域名转到这些 Pod。
+
+**6. 发布与回滚**  
+先起 v2 副本，切一部分流量（或先内部调用）。看 P99、错误率、显存。不行把 Service 指回 v1。版本号始终能查到第 4 步的训练 ID。
+
+**7. 运行**  
+看板：QPS、P99、GPU 利用率、显存。利用率低：没 batch 或请求少。显存爆：副本的卡型不够或 batch 太大。扩容 = 加 Deployment 副本，前提是还有闲卡。
+
+口头 50 秒：「提交训练就是给平台一份镜像加一条 python 命令，再声明几张卡和两块盘。镜像保证 CUDA 和依赖一致，命令就是我本地的 train.py，盘用来放数据和 ckpt，日志走容器输出。评测换一条 eval 命令。过了再导出瘦权重、注册版本，用 Deployment 起 serve.py，readiness 过了再接流量。扩散和 VLM 分开部署，避免慢请求堵死快请求。我没接过公司网关，但这是训练用户需要平台帮我标准化的整条链。」
 
 ### 三种模型部署时差别（用你项目说）
 
@@ -116,8 +208,6 @@
 ### 你没做过但要能设计的
 
 灰度、API 网关鉴权、自动扩缩：知道目的即可。鉴权是业务网关的事，本岗重点是服务能否稳定吃 GPU。不要讲网安测试方案。
-
----
 
 ---
 
